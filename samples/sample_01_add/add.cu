@@ -120,7 +120,7 @@ int main() {
   instance_t          *instances, *gpuInstances;
   cgbn_error_report_t *report;
   
-  printf("Genereating instances ...\n");
+  printf("Generating instances ...\n");
   instances=generate_instances(INSTANCES);
   
   printf("Copying instances to the GPU ...\n");

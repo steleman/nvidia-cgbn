@@ -268,7 +268,7 @@ void run_test(uint32_t instance_count, uint32_t prime_count) {
   int32_t              TPB=(params::TPB==0) ? 128 : params::TPB;
   int32_t              TPI=params::TPI, IPB=TPB/TPI;
   
-  printf("Genereating primes and instances ...\n");
+  printf("Generating primes and instances ...\n");
   primes=generate_primes(prime_count);
   instances=miller_rabin_t<params>::generate_instances(instance_count);
   

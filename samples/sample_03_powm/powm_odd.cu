@@ -310,7 +310,7 @@ void run_test(uint32_t instance_count) {
   int32_t              TPB=(params::TPB==0) ? 128 : params::TPB;    // default threads per block to 128
   int32_t              TPI=params::TPI, IPB=TPB/TPI;                // IPB is instances per block
   
-  printf("Genereating instances ...\n");
+  printf("Generating instances ...\n");
   instances=powm_odd_t<params>::generate_instances(instance_count);
   
   printf("Copying instances to the GPU ...\n");
