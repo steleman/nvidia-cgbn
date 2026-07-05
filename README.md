@@ -1,6 +1,17 @@
+### Update - 2026/07/04
+This is my fork / port of CGBN from https://github.com/NVlabs/CGBN.
+
+What has been changed:
+
+    - Added support for signed integer arithmetic.
+    - Added support for Ada and Blackwell architectures.
+    - Maximum size has been increased to 256K Bits. This can be increased further.
+    - Makefiles and build system cleanup.
+    - Tested with CUDA 12.9 and 13.2 on Ada and Blackwell architectures on Fedora 41.
+
 ### XMP 2.0 Beta Release (Oct 2018)
 
-The XMP 2.0 library provides a set of APIs for doing fixed size, unsigned multiple precision integer arithmetic in CUDA.   The library provides these APIs under the name Cooperative Groups Big Numbers (CGBN).   The idea is that a cooperative group of threads will work together to represent and process operations on each big numbers.   This beta release targets high performance on small to medium sized big numbers:  32 bits through 32K bits (in 32 bit increments) and operates with 4, 8, 16 or 32 threads per CGBN group / big number instance.
+The XMP 2.0 library provides a set of APIs for doing fixed size, unsigned multiple precision integer arithmetic in CUDA.   The library provides these APIs under the name Cooperative Groups Big Numbers (CGBN).   The idea is that a cooperative group of threads will work together to represent and process operations on each big numbers.   This beta release targets high performance on small to medium sized big numbers:  32 bits through 256K bits (in 32 bit increments) and operates with 4, 8, 16 or 32 threads per CGBN group / big number instance.
 
 ### Why use CGBN?
 
@@ -62,7 +73,7 @@ For reference documentation, please see the CGBN.md file in the docs directory.
 The CGBN APIs currently have a number of limitations:
 
 *  CGBN currently requires 4, 8, 16 or 32 thread per CGBN group.
-*  Only sizes up to 32K bits are supported.  The size must be evenly divisible by 32.
+*  Only sizes up to 256K bits are supported.  The size must be evenly divisible by 32.
 *  Each cgbn_env_t can only be instantiated at a fixed size.  There is no support for mixing sizes within an environment (other than the cgbn_wide_t).
 *  You can instantiate two cgbn_env_t instances in the same kernel with different sizes, but copying values between them is very slow.
 *  Performance of some APIs (such as GCD) are not optimal.  Performance will likely improve in future releases.

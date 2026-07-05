@@ -1,0 +1,36 @@
+# Build artifacts and downloaded dependencies for CGBN.
+# The .cu/.cc/.h sources and Makefiles are tracked; the products below are not.
+
+# Google Test: downloaded by `make download-gtest`, plus the archive it built from
+/gtest/
+/googletest-main/
+googletest-main.zip
+
+# Google Test static lib and object (built in unit_tests/ and perf_tests/)
+libgtest.a
+gtest-all.o
+
+# Object files
+*.o
+
+# Backup files
+*.orig
+
+# Unit- and performance-test binaries
+/unit_tests/tester
+/perf_tests/xmp_tester
+/perf_tests/gmp_tester
+
+# Performance throughput reports (written by the perf test runs)
+/perf_tests/gpu_throughput_report.csv
+/perf_tests/cpu_throughput_report.csv
+/perf_tests/*_throughput_report.csv
+
+# Sample binaries (each sample links a standalone binary named after its kernel)
+/samples/sample_01_add/add
+/samples/sample_02_modinv/mo
+/samples/sample_02_modinv/mo_faster
+/samples/sample_03_powm/powmo
+/samples/sample_04_miller_rabin/miller_rabin
+/samples/sample_05_signed/signed
+/samples/sample_06_large_div/large_div

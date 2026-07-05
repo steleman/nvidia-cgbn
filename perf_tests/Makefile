@@ -1,4 +1,4 @@
-.PHONY: pick clean gmp-run gmp-numactl-run xmp-run kepler maxwell pascal volta turing ampere
+.PHONY: pick clean gmp-run gmp-numactl-run xmp-run kepler maxwell pascal volta turing ampere ada blackwell
 
 ifdef GMP_HOME
   INC := -I$(GMP_HOME)/include
@@ -7,6 +7,21 @@ endif
 ifndef GMP_HOME
   INC :=
   LIB :=
+endif
+
+CUDA_VERSION ?= 13.2
+CUDA_HOME := /usr/local/cuda-$(CUDA_VERSION)
+NVCC := $(CUDA_HOME)/bin/nvcc
+
+CC := /usr/bin/gcc
+CXX := /usr/bin/g++
+
+ifeq ($(NVCC_DEBUG),1)
+  NVCC_FLAGS := -g -G -O0 -std=c++17
+  CXXFLAGS := -g3 -O0 -std=c++17
+else
+  NVCC_FLAGS := -O3 -std=c++17
+  CXXFLAGS := -O3 -std=c++17
 endif
 
 pick:
@@ -18,6 +33,8 @@ pick:
 	@echo "   make volta"
 	@echo "   make turing"
 	@echo "   make ampere"
+	@echo "   make ada"
+	@echo "   make blackwell"
 	@echo
 
 clean:
@@ -33,7 +50,7 @@ xmp-run: xmp_tester
 	@./xmp_tester
 
 gmp_tester:
-	g++ $(INC) $(LIB) gmp_tester.cc -o gmp_tester -lgmp -fopenmp
+	$(CXX) $(CXXFLAGS) $(INC) $(LIB) gmp_tester.cc -o gmp_tester -lgmp -fopenmp
 
 xmp_tester: 
 	@echo
@@ -42,25 +59,35 @@ xmp_tester:
 	@echo "   make maxwell"
 	@echo "   make pascal"
 	@echo "   make volta"
+	@echo "   make turing"
+	@echo "   make ampere"
+	@echo "   make ada"
+	@echo "   make blackwell"
 	@echo
 	@exit 0
 
 
 kepler:
-	nvcc $(INC) $(LIB) -I../include -arch=sm_35 xmp_tester.cu -o xmp_tester -lgmp
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../include -arch=sm_35 xmp_tester.cu -o xmp_tester -lgmp
 
 maxwell:
-	nvcc $(INC) $(LIB) -I../include -arch=sm_50 xmp_tester.cu -o xmp_tester -lgmp
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../include -arch=sm_50 xmp_tester.cu -o xmp_tester -lgmp
 
 pascal:
-	nvcc $(INC) $(LIB) -I../include -arch=sm_60 xmp_tester.cu -o xmp_tester -lgmp
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../include -arch=sm_60 xmp_tester.cu -o xmp_tester -lgmp
 
 volta:
-	nvcc $(INC) $(LIB) -I../include -arch=sm_70 xmp_tester.cu -o xmp_tester -lgmp
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../include -arch=sm_70 xmp_tester.cu -o xmp_tester -lgmp
 
 turing:
-	nvcc $(INC) $(LIB) -I../include -arch=sm_75 xmp_tester.cu -o xmp_tester -lgmp
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../include -arch=sm_75 xmp_tester.cu -o xmp_tester -lgmp
 
 ampere:
-	nvcc $(INC) $(LIB) -I../include -arch=sm_80 xmp_tester.cu -o xmp_tester -lgmp
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../include -arch=sm_80 xmp_tester.cu -o xmp_tester -lgmp
+
+ada:
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../include -arch=sm_89 xmp_tester.cu -o xmp_tester -lgmp
+
+blackwell:
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../include -arch=sm_120 xmp_tester.cu -o xmp_tester -lgmp
 

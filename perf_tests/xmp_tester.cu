@@ -214,9 +214,28 @@ void x_run_test(stats_t *stats, test_t operation, void *instances, uint32_t coun
 }
 
 bool x_supported_size(uint32_t size) {
-  return size==128 || size==256 || size==512 || 
-         size==1024 || size==2048 || size==3072 || size==4096 ||
-         size==5120 || size==6144 || size==7168 || size==8192;
+  switch (size) {
+  case 128:
+  case 256:
+  case 512:
+  case 1024:
+  case 2048:
+  case 3072:
+  case 4096:
+  case 5120:
+  case 6144:
+  case 7168:
+  case 8192:
+  case 16384:
+  case 32768:
+  case 65536:
+    return true;
+    break;
+  default:
+    break;
+  }
+
+  return false;
 }
 
 bool x_supported_tpi_size(uint32_t tpi, uint32_t size) {
@@ -241,6 +260,12 @@ bool x_supported_tpi_size(uint32_t tpi, uint32_t size) {
   else if(size==7168 && tpi==32)
     return true;
   else if(size==8192 && tpi==32)
+    return true;
+  else if(size==16384 && tpi==32)
+    return true;
+  else if(size==32768 && tpi==32)
+    return true;
+  else if(size==65536 && tpi==32)
     return true;
   return false;
 }
@@ -302,6 +327,15 @@ void x_run_test(stats_t *stats, test_t operation, uint32_t tpi, uint32_t size, v
   else if(tpi==32 && size==8192)
     x_run_test<32, 8192>(stats, operation, instances, count, repetitions);
 
+  else if(tpi==32 && size==16384)
+    x_run_test<32, 16384>(stats, operation, instances, count, repetitions);
+
+  else if(tpi==32 && size==32768)
+    x_run_test<32, 32768>(stats, operation, instances, count, repetitions);
+
+  else if(tpi==32 && size==65536)
+    x_run_test<32, 65536>(stats, operation, instances, count, repetitions);
+
   else {
     printf("internal error -- tpi/size -- needs to be added to x_run_test in xmp_tester.cu\n");
     exit(1);
@@ -331,6 +365,12 @@ void *x_generate_data(gmp_randstate_t state, uint32_t tpi, uint32_t size, uint32
     return (void *)xmp_tester<32, 7168>::x_generate_instances(state, count);
   else if(size==8192)
     return (void *)xmp_tester<32, 8192>::x_generate_instances(state, count);
+  else if(size==16384)
+    return (void *)xmp_tester<32, 16384>::x_generate_instances(state, count);
+  else if(size==32768)
+    return (void *)xmp_tester<32, 32768>::x_generate_instances(state, count);
+  else if(size==65536)
+    return (void *)xmp_tester<32, 65536>::x_generate_instances(state, count);
   else {
     printf("Unsupported size -- needs to be added to x_generate_data in xmp_tester.cu\n");
     exit(1);
@@ -350,11 +390,11 @@ void x_free_data(void *data, uint32_t count) {
 #endif
 
 #ifndef MAX_SIZES
-#define MAX_SIZES 25
+#define MAX_SIZES 32
 #endif
 
 #ifndef MAX_TPIS
-#define MAX_TPIS 4
+#define MAX_TPIS 16
 #endif
 
 #ifndef RUNS
@@ -444,6 +484,9 @@ int main(int argc, const char *argv[]) {
     sizes[sizes_count++]=6144;
     sizes[sizes_count++]=7168;
     sizes[sizes_count++]=8192;
+    sizes[sizes_count++]=16384;
+    sizes[sizes_count++]=32768;
+    sizes[sizes_count++]=65536;
   }
     
   chain=NULL;

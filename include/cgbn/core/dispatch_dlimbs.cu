@@ -469,4 +469,240 @@ class dispatch_dlimbs_t<core, dlimbs_algs_full> {
   }
 };
 
+template<class core>
+class dispatch_dlimbs_t<core, dlimbs_algs_multi> {
+  public:
+  static const uint32_t TPI=core::TPI;
+  static const uint32_t LIMBS=core::LIMBS;
+  static const uint32_t DLIMBS=core::DLIMBS;
+  static const uint32_t LIMB_OFFSET=DLIMBS*TPI-LIMBS;
+
+  // These algorithms are used when LIMBS>TPI, i.e. the reciprocal window spans
+  // more than one word per thread (DLIMBS>=2).  Rather than distribute the
+  // Newton-Raphson reciprocal across the warp (as the half/full variants do for
+  // DLIMBS==1), each thread gathers the full LIMBS-word dlimbs quantity and
+  // evaluates the same well-defined integer contract serially and redundantly,
+  // then keeps its own DLIMBS-word share of the result.  The contracts are
+  // exactly those documented for the half/full variants:
+  //
+  //   dlimbs_approximate     : approx = floor((beta^2-1)/denom) - beta,  beta=2^(32*LIMBS)
+  //   dlimbs_div_estimate    : q = min(beta-1, high_word(x*approx) + x + 3)
+  //   dlimbs_sqrt_rem_wide   : x=(hi<<32*LIMBS)+lo; s=isqrt(x); r=x-s^2 (returns top word of r)
+  //   dlimbs_sqrt_estimate   : num=((top<<32*LIMBS)+x)/2; q=min(beta-1, high_word(num*approx)+num+4)
+  //
+  // The serial helpers below operate on little-endian uint32 arrays.  All loops
+  // are marked "#pragma unroll 1" because LIMBS can be large (up to 256 at
+  // TPI=32/256K bits) and unrolling would explode code size.
+
+  __device__ static int32_t smp_cmp(const uint32_t *a, const uint32_t *b, int32_t n) {
+    #pragma unroll 1
+    for(int32_t i=n-1;i>=0;i--) {
+      if(a[i]<b[i]) return -1;
+      if(a[i]>b[i]) return 1;
+    }
+    return 0;
+  }
+  __device__ static uint32_t smp_sub(uint32_t *r, const uint32_t *a, const uint32_t *b, int32_t n) {
+    uint64_t borrow=0;
+    #pragma unroll 1
+    for(int32_t i=0;i<n;i++) {
+      uint64_t t=(uint64_t)a[i]-(uint64_t)b[i]-borrow;
+      r[i]=(uint32_t)t;
+      borrow=(t>>63)&0x1;
+    }
+    return (uint32_t)borrow;
+  }
+  __device__ static uint32_t smp_add(uint32_t *r, const uint32_t *a, const uint32_t *b, int32_t n) {
+    uint64_t carry=0;
+    #pragma unroll 1
+    for(int32_t i=0;i<n;i++) {
+      uint64_t t=(uint64_t)a[i]+(uint64_t)b[i]+carry;
+      r[i]=(uint32_t)t;
+      carry=t>>32;
+    }
+    return (uint32_t)carry;
+  }
+  __device__ static void smp_shl1(uint32_t *a, int32_t n) {
+    uint32_t carry=0;
+    #pragma unroll 1
+    for(int32_t i=0;i<n;i++) {
+      uint32_t nc=a[i]>>31;
+      a[i]=(a[i]<<1)|carry;
+      carry=nc;
+    }
+  }
+  // full LIMBSxLIMBS -> 2*LIMBS product, split into hi[LIMBS]/lo[LIMBS]
+  __device__ static void smp_mul(uint32_t *hi, uint32_t *lo, const uint32_t *a, const uint32_t *b) {
+    uint32_t p[2*LIMBS];
+    #pragma unroll 1
+    for(int32_t i=0;i<2*(int32_t)LIMBS;i++)
+      p[i]=0;
+    #pragma unroll 1
+    for(int32_t i=0;i<(int32_t)LIMBS;i++) {
+      uint64_t carry=0;
+      #pragma unroll 1
+      for(int32_t j=0;j<(int32_t)LIMBS;j++) {
+        uint64_t t=(uint64_t)a[i]*(uint64_t)b[j]+(uint64_t)p[i+j]+carry;
+        p[i+j]=(uint32_t)t;
+        carry=t>>32;
+      }
+      p[i+LIMBS]=(uint32_t)((uint64_t)p[i+LIMBS]+carry);
+    }
+    #pragma unroll 1
+    for(int32_t i=0;i<(int32_t)LIMBS;i++) {
+      lo[i]=p[i];
+      hi[i]=p[i+LIMBS];
+    }
+  }
+
+  // gather a dlimbs quantity so every thread holds the full LIMBS-word value
+  __device__ __forceinline__ static void gather(uint32_t full[LIMBS], const uint32_t x[DLIMBS]) {
+    dispatch_dlimbs_t<core, dlimbs_algs_common>::dlimbs_all_gather(full, x);
+  }
+  // keep this thread's DLIMBS-word share of a full LIMBS-word value (local, no shuffle).
+  // inverse of the common scatter/gather layout: word `index` lives at
+  // thread (index+LIMB_OFFSET)/DLIMBS, dlimb (index+LIMB_OFFSET)%DLIMBS.
+  __device__ __forceinline__ static void scatter(uint32_t out[DLIMBS], const uint32_t full[LIMBS]) {
+    uint32_t group_thread=threadIdx.x & TPI-1;
+    #pragma unroll
+    for(int32_t j=0;j<(int32_t)DLIMBS;j++) {
+      int32_t index=(int32_t)(group_thread*DLIMBS)+j-(int32_t)LIMB_OFFSET;
+      out[j]=(index>=0 && index<(int32_t)LIMBS) ? full[index] : 0;
+    }
+  }
+
+  __device__ __forceinline__ static void dlimbs_approximate(uint32_t approx[DLIMBS], const uint32_t denom[DLIMBS]) {
+    uint32_t D[LIMBS], A[LIMBS], rem[LIMBS+1], Dp[LIMBS+1];
+
+    // approx = floor((beta^2-1)/denom) - beta, computed by binary long division
+    // of the 2*LIMBS-word all-ones numerator by the normalized denom.  Since
+    // denom has its top bit set, the quotient lies in (beta, 2*beta), so
+    // approx = quotient mod beta = the low LIMBS words we accumulate.
+    gather(D, denom);
+    #pragma unroll 1
+    for(int32_t i=0;i<(int32_t)LIMBS;i++) {
+      Dp[i]=D[i];
+      A[i]=0;
+      rem[i]=0;
+    }
+    Dp[LIMBS]=0;
+    rem[LIMBS]=0;
+    #pragma unroll 1
+    for(int32_t k=64*(int32_t)LIMBS-1;k>=0;k--) {
+      smp_shl1(rem, LIMBS+1);
+      rem[0]|=1u;                       // every bit of the numerator is 1
+      smp_shl1(A, LIMBS);               // drop overflow above LIMBS words
+      if(smp_cmp(rem, Dp, LIMBS+1)>=0) {
+        smp_sub(rem, rem, Dp, LIMBS+1);
+        A[0]|=1u;
+      }
+    }
+    scatter(approx, A);
+  }
+
+  __device__ __forceinline__ static void dlimbs_div_estimate(uint32_t q[DLIMBS], const uint32_t x[DLIMBS], const uint32_t approx[DLIMBS]) {
+    uint32_t X[LIMBS], AP[LIMBS], hi[LIMBS], lo[LIMBS], Q[LIMBS];
+    uint32_t carry;
+    uint64_t t, c;
+
+    gather(X, x);
+    gather(AP, approx);
+    smp_mul(hi, lo, X, AP);             // hi = high LIMBS words of x*approx
+    carry=smp_add(Q, hi, X, LIMBS);     // Q = hi + x
+    t=(uint64_t)Q[0]+3;                 // + 3
+    Q[0]=(uint32_t)t;
+    c=t>>32;
+    #pragma unroll 1
+    for(int32_t i=1;i<(int32_t)LIMBS && c!=0;i++) {
+      t=(uint64_t)Q[i]+c;
+      Q[i]=(uint32_t)t;
+      c=t>>32;
+    }
+    carry+=(uint32_t)c;
+    if(carry!=0) {                      // clamp to beta-1
+      #pragma unroll 1
+      for(int32_t i=0;i<(int32_t)LIMBS;i++)
+        Q[i]=0xFFFFFFFFu;
+    }
+    scatter(q, Q);
+  }
+
+  __device__ __forceinline__ static uint32_t dlimbs_sqrt_rem_wide(uint32_t s[DLIMBS], uint32_t r[DLIMBS], const uint32_t lo[DLIMBS], const uint32_t hi[DLIMBS]) {
+    uint32_t LO[LIMBS], HI[LIMBS], X[2*LIMBS], rem[LIMBS+1], S[LIMBS], b[LIMBS+1], R[LIMBS];
+    int32_t  N=32*(int32_t)LIMBS;
+
+    // x = (hi<<32*LIMBS) + lo, a 2*LIMBS-word value; produce s=isqrt(x) and
+    // remainder x-s^2 by the classic bit-pair (restoring) integer square root.
+    gather(LO, lo);
+    gather(HI, hi);
+    #pragma unroll 1
+    for(int32_t i=0;i<(int32_t)LIMBS;i++) {
+      X[i]=LO[i];
+      X[i+LIMBS]=HI[i];
+      S[i]=0;
+      rem[i]=0;
+    }
+    rem[LIMBS]=0;
+    #pragma unroll 1
+    for(int32_t i=N-1;i>=0;i--) {
+      smp_shl1(rem, LIMBS+1);
+      smp_shl1(rem, LIMBS+1);                             // rem <<= 2
+      int32_t  bitpos=2*i;
+      uint32_t two=(X[bitpos>>5]>>(bitpos&31))&0x3u;      // next two bits, MSB pair first
+      rem[0]|=two;
+      #pragma unroll 1
+      for(int32_t t=0;t<(int32_t)LIMBS;t++)               // b = 4*S + 1
+        b[t]=S[t];
+      b[LIMBS]=0;
+      smp_shl1(b, LIMBS+1);
+      smp_shl1(b, LIMBS+1);
+      b[0]|=1u;
+      smp_shl1(S, LIMBS);                                 // S = 2*S
+      if(smp_cmp(rem, b, LIMBS+1)>=0) {
+        smp_sub(rem, rem, b, LIMBS+1);
+        S[0]|=1u;
+      }
+    }
+    #pragma unroll 1
+    for(int32_t i=0;i<(int32_t)LIMBS;i++)
+      R[i]=rem[i];
+    scatter(s, S);
+    scatter(r, R);
+    return rem[LIMBS];                                    // top word of the remainder
+  }
+
+  __device__ __forceinline__ static void dlimbs_sqrt_estimate(uint32_t q[DLIMBS], uint32_t top, const uint32_t x[DLIMBS], const uint32_t approx[DLIMBS]) {
+    uint32_t X[LIMBS], AP[LIMBS], num[LIMBS], hi[LIMBS], lo[LIMBS], Q[LIMBS];
+    uint32_t carry;
+    uint64_t t, c;
+
+    gather(X, x);
+    gather(AP, approx);
+    // num = ((top<<32*LIMBS) + x) >> 1
+    #pragma unroll 1
+    for(int32_t i=0;i<(int32_t)LIMBS;i++) {
+      uint32_t hibit=(i+1<(int32_t)LIMBS) ? (X[i+1]&1u) : (top&1u);
+      num[i]=(X[i]>>1)|(hibit<<31);
+    }
+    smp_mul(hi, lo, num, AP);           // hi = high LIMBS words of num*approx
+    carry=smp_add(Q, hi, num, LIMBS);   // Q = hi + num
+    t=(uint64_t)Q[0]+4;                 // + 4
+    Q[0]=(uint32_t)t;
+    c=t>>32;
+    #pragma unroll 1
+    for(int32_t i=1;i<(int32_t)LIMBS && c!=0;i++) {
+      t=(uint64_t)Q[i]+c;
+      Q[i]=(uint32_t)t;
+      c=t>>32;
+    }
+    carry+=(uint32_t)c;
+    if(carry!=0) {                      // clamp to beta-1
+      #pragma unroll 1
+      for(int32_t i=0;i<(int32_t)LIMBS;i++)
+        Q[i]=0xFFFFFFFFu;
+    }
+    scatter(q, Q);
+  }
+};
+
 } /* namespace cgbn */

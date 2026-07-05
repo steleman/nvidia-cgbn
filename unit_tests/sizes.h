@@ -219,5 +219,41 @@ class size32768t32 {
   static const uint32_t TPI=32;
 };
 
+class size65536t32 {
+  public:
+  // required parameters for a cgbn_parameters class
+  static const uint32_t TPB=0;
+  static const uint32_t MAX_ROTATION=4;
+  static const uint32_t SHM_LIMIT=0;
+  static const bool     CONSTANT_TIME=false;
+
+  static const uint32_t BITS=65536;
+  static const uint32_t TPI=32;
+};
+
+class size131072t32 {
+  public:
+  // required parameters for a cgbn_parameters class
+  static const uint32_t TPB=0;
+  static const uint32_t MAX_ROTATION=4;
+  static const uint32_t SHM_LIMIT=0;
+  static const bool     CONSTANT_TIME=false;
+
+  static const uint32_t BITS=131072;
+  static const uint32_t TPI=32;
+};
+
+class size262144t32 {
+  public:
+  // required parameters for a cgbn_parameters class
+  static const uint32_t TPB=0;
+  static const uint32_t MAX_ROTATION=4;
+  static const uint32_t SHM_LIMIT=0;
+  static const bool     CONSTANT_TIME=false;
+
+  static const uint32_t BITS=262144;
+  static const uint32_t TPI=32;
+};
+
 
 

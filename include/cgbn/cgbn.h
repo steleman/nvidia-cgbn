@@ -510,3 +510,7 @@ template<class env_t>
 __host__ __device__ __forceinline__ void cgbn_store(env_t env, typename env_t::cgbn_local_t *address, const typename env_t::cgbn_t &a) {
   env.store(address, a);
 }
+
+
+/* signed (two's complement) arithmetic wrappers, built on top of the unsigned API above */
+#include "cgbn_signed.h"

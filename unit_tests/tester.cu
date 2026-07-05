@@ -48,7 +48,10 @@ typedef enum test_enum {
   
   test_accumulator_1, test_accumulator_2, test_binary_inverse_1, test_gcd_1, test_modular_inverse_1, test_modular_power_1,
   test_bn2mont_1, test_mont2bn_1, test_mont_mul_1, test_mont_sqr_1, test_mont_reduce_wide_1, test_barrett_div_1,
-  test_barrett_rem_1, test_barrett_div_rem_1, test_barrett_div_wide_1, test_barrett_rem_wide_1, test_barrett_div_rem_wide_1
+  test_barrett_rem_1, test_barrett_div_rem_1, test_barrett_div_wide_1, test_barrett_rem_wide_1, test_barrett_div_rem_wide_1,
+
+  test_signed_compare_1, test_signed_abs_1, test_signed_div_1, test_signed_rem_1, test_signed_div_rem_1,
+  test_signed_shift_right_1, test_signed_mul_high_1, test_signed_mul_wide_1, test_signed_sqr_wide_1
 } test_t;
 
 template<test_t test, class params>
@@ -251,6 +254,16 @@ bool run_test(uint32_t count) {
   
   if(params::size>1024)
     count=count*(1024*1024/params::size)/1024;
+
+#ifdef LARGE_TEST
+  // LARGE_TEST validates only the largest sizes; cap the instances per test so
+  // the 64K-256K bit runs finish in minutes (correctness check, not throughput).
+  #ifndef LARGE_TEST_COUNT
+    #define LARGE_TEST_COUNT 8
+  #endif
+  if(count>LARGE_TEST_COUNT)
+    count=LARGE_TEST_COUNT;
+#endif
 
   cpu_inputs=cpu_data<params>(count);
   gpu_inputs=gpu_data<params>(count);

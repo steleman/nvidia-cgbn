@@ -125,11 +125,15 @@ class dispatch_shift_rotate_t<core, 0> {
   }
   
   __device__ __forceinline__ static void rotate_left(uint32_t r[LIMBS], const uint32_t a[LIMBS], const uint32_t numbits) {
-    drotate_left<TPI, LIMBS, MAX_ROTATION>(core::sync_mask(), r, a, numbits);
+    // reduce mod BITS first: drotate feeds numbits>>5 to static_divide_small,
+    // which is only exact for a bounded range, so an un-reduced numbits (up to
+    // 2^32) can rotate incorrectly at large LIMBS.  The generic (padded) path
+    // reduces the same way.
+    drotate_left<TPI, LIMBS, MAX_ROTATION>(core::sync_mask(), r, a, numbits%BITS);
   }
   
   __device__ __forceinline__ static void rotate_right(uint32_t r[LIMBS], const uint32_t a[LIMBS], const uint32_t numbits) {
-    drotate_right<TPI, LIMBS, MAX_ROTATION>(core::sync_mask(), r, a, numbits);
+    drotate_right<TPI, LIMBS, MAX_ROTATION>(core::sync_mask(), r, a, numbits%BITS);
   }
 };
 

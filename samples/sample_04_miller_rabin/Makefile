@@ -7,6 +7,21 @@ ifndef GMP_HOME
   LIB :=
 endif
 
+CUDA_VERSION ?= 13.2
+CUDA_HOME := /usr/local/cuda-$(CUDA_VERSION)
+NVCC := $(CUDA_HOME)/bin/nvcc
+
+CC := /usr/bin/gcc
+CXX := /usr/bin/g++
+
+ifeq ($(NVCC_DEBUG),1)
+  NVCC_FLAGS := -g -G -O0 -std=c++17
+  CXXFLAGS := -g3 -O0 -std=c++17
+else
+  NVCC_FLAGS := -O3 -std=c++17
+  CXXFLAGS := -O3 -std=c++17
+endif
+
 pick:
 	@echo
 	@echo Please run one of the following:
@@ -16,26 +31,34 @@ pick:
 	@echo "   make volta"
 	@echo "   make turing"
 	@echo "   make ampere"
+	@echo "   make ada"
+	@echo "   make blackwell"
 	@echo
 
 clean:
-	rm -f mr
+	rm -f miller_rabin
 
 kepler:
-	nvcc $(INC) $(LIB) -I../../include -arch=sm_35 miller_rabin.cu -o mr -lgmp
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../../include -arch=sm_35 miller_rabin.cu -o miller_rabin -lgmp
 
 maxwell:
-	nvcc $(INC) $(LIB) -I../../include -arch=sm_50 miller_rabin.cu -o mr -lgmp
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../../include -arch=sm_50 miller_rabin.cu -o miller_rabin -lgmp
 
 pascal:
-	nvcc $(INC) $(LIB) -I../../include -arch=sm_60 miller_rabin.cu -o mr -lgmp
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../../include -arch=sm_60 miller_rabin.cu -o miller_rabin -lgmp
 
 volta: 
-	nvcc $(INC) $(LIB) -I../../include -arch=sm_70 miller_rabin.cu -o mr -lgmp
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../../include -arch=sm_70 miller_rabin.cu -o miller_rabin -lgmp
 
 turing: 
-	nvcc $(INC) $(LIB) -I../../include -arch=sm_75 miller_rabin.cu -o mr -lgmp
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../../include -arch=sm_75 miller_rabin.cu -o miller_rabin -lgmp
 
 ampere: 
-	nvcc $(INC) $(LIB) -I../../include -arch=sm_80 miller_rabin.cu -o mr -lgmp
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../../include -arch=sm_80 miller_rabin.cu -o miller_rabin -lgmp
+
+ada:
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../../include -arch=sm_89 miller_rabin.cu -o miller_rabin -lgmp
+
+blackwell:
+	$(NVCC) $(NVCC_FLAGS) $(INC) $(LIB) -I../../include -arch=sm_120 miller_rabin.cu -o miller_rabin -lgmp
 

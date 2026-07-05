@@ -106,3 +106,13 @@ IN THE SOFTWARE.
 #include "barrett_rem_wide.h"
 #include "barrett_div_rem_wide.h"
 #include "modular_power.h"
+
+#include "signed_compare_1.h"
+#include "signed_abs_1.h"
+#include "signed_div_1.h"
+#include "signed_rem_1.h"
+#include "signed_div_rem_1.h"
+#include "signed_shift_right_1.h"
+#include "signed_mul_high_1.h"
+#include "signed_mul_wide_1.h"
+#include "signed_sqr_wide_1.h"

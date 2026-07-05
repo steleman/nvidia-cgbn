@@ -610,3 +610,124 @@ Computes the remainder using a Barrett reduction.  Semantics are the same as `re
 `void cgbn_barrett_div_rem_wide(cgbn_env_t env, cgbn_t &q, cgbn_t &r, const cgbn_wide_t &num, const cgbn_t &denom, const cgbn_t &approx, const uint32_t denom_clz)`
 
 Computes both the quotient and remainder using the Barrett inverse.  Semantics are the same as `div_rem_wide(q, r, num, denom)`.
+
+# Signed (Two's Complement) Integers
+
+CGBN stores an unsigned value as a fixed `BITS`-wide, little-endian array of 32-bit limbs.  A **signed** CGBN uses the identical encoding, reinterpreted as **two's complement**: bit `BITS-1` (the most significant bit) is the sign bit.  Because the width is fixed, most operations produce bit-for-bit identical results whether the operands are read as signed or unsigned, so they have **no** separate signed variant — just use the ordinary unsigned routine:
+
+> `cgbn_set`, `cgbn_swap`, `cgbn_add`, `cgbn_sub`, `cgbn_negate`, `cgbn_mul` (low half), `cgbn_sqr` (low half), `cgbn_equals`, `cgbn_shift_left`, `cgbn_rotate_left`, `cgbn_rotate_right`, every `cgbn_bitwise_*` routine, and `cgbn_load` / `cgbn_store`.
+
+Only the operations whose result depends on the sign interpretation get a `cgbn_signed_*` wrapper.  These wrappers are declared in `cgbn/cgbn_signed.h` (included automatically by `cgbn/cgbn.h`) and are implemented purely in terms of the unsigned API, so they are available on every backend (`__host__` and `__device__`).
+
+Division and remainder **truncate toward zero** (C / GMP `mpz_tdiv` semantics): the quotient truncates toward zero and the remainder takes the sign of the dividend, so that `q*denom + r == num` and `|r| < |denom|`.
+
+### Sign inspection and absolute value
+
+`bool cgbn_signed_is_negative(cgbn_env_t env, const cgbn_t &a)`
+
+Returns true if the two's complement value of **_a_** is negative (its top bit is set).
+
+---
+
+`int32_t cgbn_signed_negate(cgbn_env_t env, cgbn_t &r, const cgbn_t &a)`
+
+Computes **_-a_**.  Identical to `cgbn_negate` (provided for naming symmetry).  Returns -1 if **_a_** is the most negative value (negation overflows), otherwise 0.
+
+---
+
+`bool cgbn_signed_abs(cgbn_env_t env, cgbn_t &r, const cgbn_t &a)`
+
+Stores **_|a|_** into **_r_** and returns true if **_a_** was negative.  Note that the absolute value of the most negative representable value overflows back to itself.
+
+### Small signed integer conversion
+
+`void cgbn_signed_set_i32(cgbn_env_t env, cgbn_t &r, const int32_t value)`
+
+Sets **_r_** to the sign-extended value of a signed 32-bit integer.
+
+---
+
+`int32_t cgbn_signed_get_i32(cgbn_env_t env, const cgbn_t &a)`
+
+Returns the least significant 32 bits of **_a_**, reinterpreted as a signed 32-bit integer.
+
+### Comparison
+
+`int32_t cgbn_signed_compare(cgbn_env_t env, const cgbn_t &a, const cgbn_t &b)`
+
+Signed (two's complement) comparison.  Returns 1 if **_a>b_**, 0 if **_a==b_**, and -1 if **_a<b_**.
+
+---
+
+`int32_t cgbn_signed_compare_i32(cgbn_env_t env, const cgbn_t &a, const int32_t value)`
+
+Signed comparison of **_a_** against a sign-extended 32-bit constant.
+
+### Arithmetic right shift
+
+`void cgbn_signed_shift_right(cgbn_env_t env, cgbn_t &r, const cgbn_t &a, const uint32_t numbits)`
+
+Computes **_a >> numbits_** with sign extension (an arithmetic shift): the vacated high bits are filled with copies of the sign bit.  This is the signed counterpart of `cgbn_shift_right`, which shifts in zeros.
+
+### Truncated division and remainder
+
+`void cgbn_signed_div(cgbn_env_t env, cgbn_t &q, const cgbn_t &num, const cgbn_t &denom)`
+
+Computes the quotient `trunc(num / denom)`, truncated toward zero.
+
+---
+
+`void cgbn_signed_rem(cgbn_env_t env, cgbn_t &r, const cgbn_t &num, const cgbn_t &denom)`
+
+Computes the remainder `num - trunc(num / denom) * denom`.  The remainder takes the sign of **_num_**.
+
+---
+
+`void cgbn_signed_div_rem(cgbn_env_t env, cgbn_t &q, cgbn_t &r, const cgbn_t &num, const cgbn_t &denom)`
+
+Computes both the quotient and remainder in one call.
+
+### High-half and double-width signed products
+
+`void cgbn_signed_mul_high(cgbn_env_t env, cgbn_t &r, const cgbn_t &a, const cgbn_t &b)`
+
+Computes the high `BITS` bits of the signed product **_a \* b_**.  (The low half is identical to the unsigned `cgbn_mul`.)
+
+---
+
+`void cgbn_signed_sqr_high(cgbn_env_t env, cgbn_t &r, const cgbn_t &a)`
+
+Computes the high `BITS` bits of the signed product **_a \* a_**.
+
+---
+
+`void cgbn_signed_mul_wide(cgbn_env_t env, cgbn_wide_t &r, const cgbn_t &a, const cgbn_t &b)`
+
+Computes the full `2*BITS`-bit signed product **_a \* b_**.  **_r._low_** holds the low `BITS` bits and **_r._high_** holds the high `BITS` bits (as a two's complement `2*BITS`-bit value).
+
+---
+
+`void cgbn_signed_sqr_wide(cgbn_env_t env, cgbn_wide_t &r, const cgbn_t &a)`
+
+Computes the full `2*BITS`-bit signed product **_a \* a_**.
+
+For a complete worked example (with independent GMP verification), see `samples/sample_05_signed`.
+
+---
+
+# Size Range (up to 256K bits)
+
+CGBN supports sizes from 32 bits up to **256K bits** (262144 bits), in 32-bit increments.  Add, subtract,
+multiply, square, shift, rotate, bitwise, compare, load/store and Montgomery operations scale to any size
+in this range with the usual warp-parallel algorithms.
+
+Division, remainder, square root and the Barrett routines rely on an internal reciprocal of the leading
+`LIMBS`-word window of the operand.  When `LIMBS <= TPI` (sizes up to 32K bits at `TPI=32`) this reciprocal
+is computed with the warp-distributed Newton-Raphson used since the original release.  When `LIMBS > TPI`
+(sizes above 32K bits at `TPI=32`) the library uses the `dlimbs_algs_multi` path, in which every thread
+evaluates the reciprocal / quotient-estimate / integer-square-root contracts serially over the gathered
+window.  Results are identical, but because that step is serial and redundant across the warp its cost
+grows roughly as `O(LIMBS^2)`; divide/sqrt of very large operands (e.g. 256K bits) is therefore
+substantially slower per instance than at 32K.  Throughput-oriented workloads should still prefer the
+largest `TPI` (`TPI=32`) so that `LIMBS`, and hence the serial window, stays as small as possible.  All
+other operations are unaffected.
