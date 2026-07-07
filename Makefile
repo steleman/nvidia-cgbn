@@ -66,5 +66,5 @@ blackwell: check
 	make -C perf_tests blackwell
 
 check:
-	@if [ -z "$(GTEST_HOME)" -a ! -d "gtest" ]; then echo "Google Test framework required, see documentation"; exit 1; fi
+	@if [ -z "$(GTEST_HOME)" -a ! -d "gtest" ]; then echo "Google Test framework is required; do gmake download-gtest first or set \$$(GTEST_HOME)."; exit 1; fi
 
