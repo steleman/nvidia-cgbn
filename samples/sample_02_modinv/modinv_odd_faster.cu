@@ -31,15 +31,15 @@ IN THE SOFTWARE.
 #include "../utility/support.h"
 
 /************************************************************************************************
- *  This modinv example is based on the Right-Shift Algorithm for Classical Modular Inverse
- *  from the paper "New Algorithm for Classical Modular Inverse" by Robert Lorencz.
+ *  This modinv example is based on the Right-Shift Algorithm for Classical
+ * Modular Inverse from the paper "New Algorithm for Classical Modular Inverse"
+ * by Robert Lorencz.
  *
  *  This algorithm only works for an odd modulus.
  *
- *  The clean-up phase uses the XMP library built-in for Montgomery reductions, which improves
- *  performance quite a bit.  
+ *  The clean-up phase uses the XMP library built-in for Montgomery reductions,
+ * which improves performance quite a bit.
  ************************************************************************************************/
- 
 
 // IMPORTANT:  DO NOT DEFINE TPI OR BITS BEFORE INCLUDING CGBN
 #define TPI 32
@@ -54,124 +54,122 @@ typedef struct {
 } instance_t;
 
 // support routine to generate random instances
-instance_t *generate_instances(uint32_t count) {
-  instance_t *instances=(instance_t *)malloc(sizeof(instance_t)*count);
+instance_t* generate_instances(uint32_t count) {
+  instance_t* instances = (instance_t*)malloc(sizeof(instance_t) * count);
 
-  for(int index=0;index<count;index++) {
-    random_words(instances[index].x._limbs, BITS/32);
-    random_words(instances[index].m._limbs, BITS/32);
-    instances[index].m._limbs[0] |= 1;                 // guarantee modulus is odd
+  for (int index = 0; index < count; index++) {
+    random_words(instances[index].x._limbs, BITS / 32);
+    random_words(instances[index].m._limbs, BITS / 32);
+    instances[index].m._limbs[0] |= 1; // guarantee modulus is odd
   }
   return instances;
 }
 
 // support routine to verify the GPU results using the CPU
-void verify_results(instance_t *instances, uint32_t count) {
+void verify_results(instance_t* instances, uint32_t count) {
   mpz_t x, m, computed, correct;
-  
+
   mpz_init(x);
   mpz_init(m);
   mpz_init(computed);
   mpz_init(correct);
-  
-  for(int index=0;index<count;index++) {
-    to_mpz(x, instances[index].x._limbs, BITS/32);
-    to_mpz(m, instances[index].m._limbs, BITS/32);
-    to_mpz(computed, instances[index].inverse._limbs, BITS/32);
-    
-    if(mpz_invert(correct, x, m)==0)
+
+  for (int index = 0; index < count; index++) {
+    to_mpz(x, instances[index].x._limbs, BITS / 32);
+    to_mpz(m, instances[index].m._limbs, BITS / 32);
+    to_mpz(computed, instances[index].inverse._limbs, BITS / 32);
+
+    if (mpz_invert(correct, x, m) == 0)
       mpz_set_ui(correct, 0);
-    if(mpz_cmp(correct, computed)!=0) {
+    if (mpz_cmp(correct, computed) != 0) {
       printf("gpu inverse kernel failed on instance %d\n", index);
       return;
     }
   }
-  
+
   mpz_clear(x);
   mpz_clear(m);
   mpz_clear(computed);
   mpz_clear(correct);
-  
+
   printf("All results match\n");
 }
 
 // helpful typedefs for the kernel
-typedef cgbn_context_t<TPI>         context_t;
+typedef cgbn_context_t<TPI> context_t;
 typedef cgbn_env_t<context_t, BITS> env_t;
 
 // the actual kernel
-__global__ void kernel_modinv_odd(cgbn_error_report_t *report, instance_t *instances, uint32_t count) {
+__global__ void kernel_modinv_odd(cgbn_error_report_t* report,
+                                  instance_t* instances, uint32_t count) {
   int32_t instance;
-  
+
   // decode an instance number from the blockIdx and threadIdx
-  instance=(blockIdx.x*blockDim.x + threadIdx.x)/TPI;
-  if(instance>=count)
+  instance = (blockIdx.x * blockDim.x + threadIdx.x) / TPI;
+  if (instance >= count)
     return;
 
-  context_t          bn_context(cgbn_report_monitor, report, instance);   // construct a context
-  env_t              bn_env(bn_context);                                  // construct an environment for 1024-bit math
-  env_t::cgbn_t      m, r, s, u, v;                                       // define m, r, s, u, v as 1024-bit bignums
-  env_t::cgbn_wide_t w;                                                   // define w as a wide (2048-bit) bignum
-  uint32_t           np0;
-  int32_t            k=0, carry, compare;
-  
+  context_t bn_context(cgbn_report_monitor, report,
+                       instance); // construct a context
+  env_t bn_env(bn_context);       // construct an environment for 1024-bit math
+  env_t::cgbn_t m, r, s, u, v;    // define m, r, s, u, v as 1024-bit bignums
+  env_t::cgbn_wide_t w;           // define w as a wide (2048-bit) bignum
+  uint32_t np0;
+  int32_t k = 0, carry, compare;
+
   cgbn_load(bn_env, m, &(instances[instance].m));
   cgbn_load(bn_env, v, &(instances[instance].x));
 
   cgbn_set(bn_env, u, m);
   cgbn_set_ui32(bn_env, r, 0);
   cgbn_set_ui32(bn_env, s, 1);
-  
-  while(true) {
+
+  while (true) {
     k++;
-    if(cgbn_get_ui32(bn_env, u)%2==0) {
+    if (cgbn_get_ui32(bn_env, u) % 2 == 0) {
       cgbn_rotate_right(bn_env, u, u, 1);
       cgbn_add(bn_env, s, s, s);
-    }
-    else if(cgbn_get_ui32(bn_env, v)%2==0) {
+    } else if (cgbn_get_ui32(bn_env, v) % 2 == 0) {
       cgbn_rotate_right(bn_env, v, v, 1);
       cgbn_add(bn_env, r, r, r);
-    }
-    else {
-      compare=cgbn_compare(bn_env, u, v);
-      if(compare>0) {
+    } else {
+      compare = cgbn_compare(bn_env, u, v);
+      if (compare > 0) {
         cgbn_add(bn_env, r, r, s);
         cgbn_sub(bn_env, u, u, v);
         cgbn_rotate_right(bn_env, u, u, 1);
         cgbn_add(bn_env, s, s, s);
-      }
-      else if(compare<0) {
+      } else if (compare < 0) {
         cgbn_add(bn_env, s, s, r);
         cgbn_sub(bn_env, v, v, u);
         cgbn_rotate_right(bn_env, v, v, 1);
         cgbn_add(bn_env, r, r, r);
-      }
-      else
+      } else
         break;
     }
   }
-  
-  if(!cgbn_equals_ui32(bn_env, u, 1)) 
+
+  if (!cgbn_equals_ui32(bn_env, u, 1))
     cgbn_set_ui32(bn_env, r, 0);
-  else {  
+  else {
     // last r update
-    carry=cgbn_add(bn_env, r, r, r);
-    if(carry==1) 
+    carry = cgbn_add(bn_env, r, r, r);
+    if (carry == 1)
       cgbn_sub(bn_env, r, r, m);
 
     // clean up
-    if(cgbn_compare(bn_env, r, m)>0)
+    if (cgbn_compare(bn_env, r, m) > 0)
       cgbn_sub(bn_env, r, r, m);
     cgbn_sub(bn_env, r, m, r);
 
     // faster cleanup, taking advantage of the built-in mont_reduce_wide.
-    np0=-cgbn_binary_inverse_ui32(bn_env, cgbn_get_ui32(bn_env, m));
+    np0 = -cgbn_binary_inverse_ui32(bn_env, cgbn_get_ui32(bn_env, m));
     cgbn_set(bn_env, w._low, r);
-    cgbn_set_ui32(bn_env, w._high, 0);    
+    cgbn_set_ui32(bn_env, w._high, 0);
     cgbn_mont_reduce_wide(bn_env, r, w, m, np0);
 
-    cgbn_shift_left(bn_env, w._low, r, 2*BITS-k);
-    cgbn_shift_right(bn_env, w._high, r, k-BITS);
+    cgbn_shift_left(bn_env, w._low, r, 2 * BITS - k);
+    cgbn_shift_right(bn_env, w._high, r, k - BITS);
     cgbn_mont_reduce_wide(bn_env, r, w, m, np0);
   }
 
@@ -179,35 +177,39 @@ __global__ void kernel_modinv_odd(cgbn_error_report_t *report, instance_t *insta
 }
 
 int main() {
-  instance_t          *instances, *gpuInstances;
-  cgbn_error_report_t *report;
-  
+  instance_t *instances, *gpuInstances;
+  cgbn_error_report_t* report;
+
   printf("Generating instances ...\n");
-  instances=generate_instances(INSTANCES);
-  
+  instances = generate_instances(INSTANCES);
+
   printf("Copying instances to the GPU ...\n");
   CUDA_CHECK(cudaSetDevice(0));
-  CUDA_CHECK(cudaMalloc((void **)&gpuInstances, sizeof(instance_t)*INSTANCES));
-  CUDA_CHECK(cudaMemcpy(gpuInstances, instances, sizeof(instance_t)*INSTANCES, cudaMemcpyHostToDevice));
-  
+  CUDA_CHECK(cudaMalloc((void**)&gpuInstances, sizeof(instance_t) * INSTANCES));
+  CUDA_CHECK(cudaMemcpy(gpuInstances, instances, sizeof(instance_t) * INSTANCES,
+                        cudaMemcpyHostToDevice));
+
   // create a cgbn_error_report for CGBN to report back errors
-  CUDA_CHECK(cgbn_error_report_alloc(&report)); 
-  
+  CUDA_CHECK(cgbn_error_report_alloc(&report));
+
   printf("Running GPU kernel ...\n");
   // launch with 32 threads per instance, 128 threads (4 instances) per block
-  kernel_modinv_odd<<<(INSTANCES+3)/4, 128>>>(report, gpuInstances, INSTANCES);
+  kernel_modinv_odd<<<(INSTANCES + 3) / 4, 128>>>(report, gpuInstances,
+                                                  INSTANCES);
 
-  // error report uses managed memory, so we sync the device (or stream) and check for cgbn errors
+  // error report uses managed memory, so we sync the device (or stream) and
+  // check for cgbn errors
   CUDA_CHECK(cudaDeviceSynchronize());
   CGBN_CHECK(report);
-    
+
   // copy the instances back from gpuMemory
   printf("Copying results back to CPU ...\n");
-  CUDA_CHECK(cudaMemcpy(instances, gpuInstances, sizeof(instance_t)*INSTANCES, cudaMemcpyDeviceToHost));
-  
+  CUDA_CHECK(cudaMemcpy(instances, gpuInstances, sizeof(instance_t) * INSTANCES,
+                        cudaMemcpyDeviceToHost));
+
   printf("Verifying the results ...\n");
   verify_results(instances, INSTANCES);
-  
+
   // clean up
   free(instances);
   CUDA_CHECK(cudaFree(gpuInstances));

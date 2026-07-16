@@ -22,42 +22,42 @@ IN THE SOFTWARE.
 
 ***/
 
-template<class params>
-struct implementation<test_div_rem_wide_1, params> {
-  static const uint32_t TPI=params::TPI;
-  static const uint32_t BITS=params::BITS;
+template <class params> struct implementation<test_div_rem_wide_1, params> {
+  static const uint32_t TPI = params::TPI;
+  static const uint32_t BITS = params::BITS;
 
-  typedef cgbn_context_t<TPI, params>    context_t;
-  typedef cgbn_env_t<context_t, BITS>    env_t;
-  typedef typename env_t::cgbn_t         bn_t;
-  typedef typename env_t::cgbn_wide_t    bn_wide_t;
+  typedef cgbn_context_t<TPI, params> context_t;
+  typedef cgbn_env_t<context_t, BITS> env_t;
+  typedef typename env_t::cgbn_t bn_t;
+  typedef typename env_t::cgbn_wide_t bn_wide_t;
 
-  public:
-  __device__ __host__ static void run(typename types<params>::input_t *inputs, typename types<params>::output_t *outputs, int32_t instance) {
+public:
+  __device__ __host__ static void run(typename types<params>::input_t* inputs,
+                                      typename types<params>::output_t* outputs,
+                                      int32_t instance) {
     context_t context(cgbn_print_monitor);
-    env_t     env(context);
-    bn_t      h1, h2, d, r1, r2;
+    env_t env(context);
+    bn_t h1, h2, d, r1, r2;
     bn_wide_t xh;
-    int32_t   compare;
+    int32_t compare;
 
     cgbn_load(env, h1, &(inputs[instance].h1));
     cgbn_load(env, h2, &(inputs[instance].h2));
     cgbn_load(env, xh._low, &(inputs[instance].x1));
 
-    compare=cgbn_compare(env, h1, h2);
-    if(compare==0)
+    compare = cgbn_compare(env, h1, h2);
+    if (compare == 0)
       return;
 
-    if(compare>0) {
+    if (compare > 0) {
       cgbn_set(env, xh._high, h2);
       cgbn_set(env, d, h1);
-    }
-    else {
+    } else {
       cgbn_set(env, xh._high, h1);
       cgbn_set(env, d, h2);
     }
 
-    if(!cgbn_equals_ui32(env, d, 0))
+    if (!cgbn_equals_ui32(env, d, 0))
       cgbn_div_rem_wide(env, r1, r2, xh, d);
     else {
       cgbn_set_ui32(env, r1, 0);
@@ -68,5 +68,3 @@ struct implementation<test_div_rem_wide_1, params> {
     cgbn_store(env, &(outputs[instance].r2), r2);
   }
 };
-
-

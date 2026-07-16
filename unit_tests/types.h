@@ -22,9 +22,8 @@ IN THE SOFTWARE.
 
 ***/
 
-template<class params>
-class types {
-  public:
+template <class params> class types {
+public:
   typedef struct {
     cgbn_mem_t<params::size> h1;
     cgbn_mem_t<params::size> h2;
@@ -32,7 +31,7 @@ class types {
     cgbn_mem_t<params::size> x2;
     cgbn_mem_t<params::size> x3;
 
-    uint32_t                 u[32];  // keep everything 128 byte aligned
+    uint32_t u[32]; // keep everything 128 byte aligned
   } input_t;
 
   typedef struct {
@@ -40,10 +39,9 @@ class types {
     cgbn_mem_t<params::size> r2;
   } output_t;
 
-  typedef cgbn_context_t<params::TPI>              bn_context_t;
-  typedef cgbn_env_t<bn_context_t, params::size>   bn_env_t;
-  typedef typename bn_env_t::cgbn_t                bn_t;
-  typedef typename bn_env_t::cgbn_wide_t           bn_wide_t;
-  typedef typename bn_env_t::cgbn_accumulator_t    bn_acc_t;
+  typedef cgbn_context_t<params::TPI> bn_context_t;
+  typedef cgbn_env_t<bn_context_t, params::size> bn_env_t;
+  typedef typename bn_env_t::cgbn_t bn_t;
+  typedef typename bn_env_t::cgbn_wide_t bn_wide_t;
+  typedef typename bn_env_t::cgbn_accumulator_t bn_acc_t;
 };
-

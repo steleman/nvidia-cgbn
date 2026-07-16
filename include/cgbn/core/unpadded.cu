@@ -24,18 +24,17 @@ IN THE SOFTWARE.
 
 namespace cgbn {
 
-template<class params>
-class unpadded_t {
-  public:
-  static const uint32_t        TPB=params::TPB;
-  static const uint32_t        TPI=params::TPI;
-  static const uint32_t        LIMBS=params::LIMBS;
-  static const uint32_t        BITS=TPI*LIMBS*32;
-  static const uint32_t        PADDING=0;
-  static const uint32_t        MAX_ROTATION=params::MAX_ROTATION;
-  static const uint32_t        SHM_LIMIT=params::SHM_LIMIT;
-  static const bool            CONSTANT_TIME=params::CONSTANT_TIME;
-  static const cgbn_syncable_t SYNCABLE=params::SYNCABLE;  
+template <class params> class unpadded_t {
+public:
+  static const uint32_t TPB = params::TPB;
+  static const uint32_t TPI = params::TPI;
+  static const uint32_t LIMBS = params::LIMBS;
+  static const uint32_t BITS = TPI * LIMBS * 32;
+  static const uint32_t PADDING = 0;
+  static const uint32_t MAX_ROTATION = params::MAX_ROTATION;
+  static const uint32_t SHM_LIMIT = params::SHM_LIMIT;
+  static const bool CONSTANT_TIME = params::CONSTANT_TIME;
+  static const cgbn_syncable_t SYNCABLE = params::SYNCABLE;
 };
 
 } /* namespace cgbn */

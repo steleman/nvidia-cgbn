@@ -22,27 +22,29 @@ IN THE SOFTWARE.
 
 ***/
 
-template<class params>
+template <class params>
 struct implementation<test_extract_bits_ui32_1, params> {
-  static const uint32_t TPI=params::TPI;
-  static const uint32_t BITS=params::BITS;
+  static const uint32_t TPI = params::TPI;
+  static const uint32_t BITS = params::BITS;
 
-  typedef cgbn_context_t<TPI, params>    context_t;
-  typedef cgbn_env_t<context_t, BITS>    env_t;
-  typedef typename env_t::cgbn_t         bn_t;
+  typedef cgbn_context_t<TPI, params> context_t;
+  typedef cgbn_env_t<context_t, BITS> env_t;
+  typedef typename env_t::cgbn_t bn_t;
 
-  public:
-  __device__ __host__ static void run(typename types<params>::input_t *inputs, typename types<params>::output_t *outputs, int32_t instance) {
+public:
+  __device__ __host__ static void run(typename types<params>::input_t* inputs,
+                                      typename types<params>::output_t* outputs,
+                                      int32_t instance) {
     context_t context(cgbn_print_monitor);
-    env_t     env(context);
-    bn_t      x1, r1;
-    uint32_t  u1, u2, u3;
+    env_t env(context);
+    bn_t x1, r1;
+    uint32_t u1, u2, u3;
 
     cgbn_load(env, x1, &(inputs[instance].x1));
-    u1=inputs[instance].u[0];
-    u2=inputs[instance].u[1];
+    u1 = inputs[instance].u[0];
+    u2 = inputs[instance].u[1];
 
-    u3=cgbn_extract_bits_ui32(env, x1, u1%BITS, u2%40);
+    u3 = cgbn_extract_bits_ui32(env, x1, u1 % BITS, u2 % 40);
     cgbn_set_ui32(env, r1, u3);
 
     cgbn_store(env, &(outputs[instance].r1), r1);

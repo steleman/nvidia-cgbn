@@ -24,72 +24,79 @@ IN THE SOFTWARE.
 
 namespace cgbn {
 
-template<class env> 
-__device__ __forceinline__ uint32_t core_t<env>::pop_count(const uint32_t a[LIMBS]) {
-  uint32_t sync=sync_mask(), total=0;
+template <class env>
+__device__ __forceinline__ uint32_t
+core_t<env>::pop_count(const uint32_t a[LIMBS]) {
+  uint32_t sync = sync_mask(), total = 0;
 
-  #pragma unroll
-  for(int32_t index=0;index<LIMBS;index++)
-    total+=__popc(a[index]);
-  #pragma unroll
-  for(int index=TPI/2;index>0;index=index>>1)
-    total+=__shfl_xor_sync(sync, total, index, TPI);
+#pragma unroll
+  for (int32_t index = 0; index < LIMBS; index++)
+    total += __popc(a[index]);
+#pragma unroll
+  for (int index = TPI / 2; index > 0; index = index >> 1)
+    total += __shfl_xor_sync(sync, total, index, TPI);
   return total;
 }
 
-template<class env> 
+template <class env>
 __device__ __forceinline__ uint32_t core_t<env>::clz(const uint32_t a[LIMBS]) {
-  uint32_t sync=sync_mask(), group_thread=threadIdx.x & TPI-1, warp_thread=threadIdx.x & warpSize-1;
+  uint32_t sync = sync_mask(), group_thread = threadIdx.x & TPI - 1,
+           warp_thread = threadIdx.x & warpSize - 1;
   uint32_t clz, topclz;
-  
-  clz=mpclz<LIMBS>(a);
-  topclz=__ballot_sync(sync, clz!=32*LIMBS);
-  if(TPI<warpSize)
-    topclz=topclz<<(warpSize-TPI)-(warp_thread-group_thread);
-  topclz=uclz(topclz);
-  if(topclz>=TPI)
+
+  clz = mpclz<LIMBS>(a);
+  topclz = __ballot_sync(sync, clz != 32 * LIMBS);
+  if (TPI < warpSize)
+    topclz = topclz << (warpSize - TPI) - (warp_thread - group_thread);
+  topclz = uclz(topclz);
+  if (topclz >= TPI)
     return BITS;
-  return __shfl_sync(sync, (TPI-1-group_thread)*32*LIMBS + clz, 31-topclz, TPI)-LIMBS*TPI*32+BITS;
+  return __shfl_sync(sync, (TPI - 1 - group_thread) * 32 * LIMBS + clz,
+                     31 - topclz, TPI) -
+         LIMBS * TPI * 32 + BITS;
 }
 
-template<class env> 
+template <class env>
 __device__ __forceinline__ uint32_t core_t<env>::ctz(const uint32_t a[LIMBS]) {
-  uint32_t sync=sync_mask(), group_thread=threadIdx.x & TPI-1, warp_thread=threadIdx.x & warpSize-1;
+  uint32_t sync = sync_mask(), group_thread = threadIdx.x & TPI - 1,
+           warp_thread = threadIdx.x & warpSize - 1;
   uint32_t ctz, bottomctz;
 
-  ctz=mpctz<LIMBS>(a);
-  bottomctz=__ballot_sync(sync, ctz!=32*LIMBS);
-  if(TPI<warpSize)
-    bottomctz=bottomctz>>(warp_thread^group_thread);
-  bottomctz=uctz(bottomctz);
-  if(bottomctz>=TPI)
+  ctz = mpctz<LIMBS>(a);
+  bottomctz = __ballot_sync(sync, ctz != 32 * LIMBS);
+  if (TPI < warpSize)
+    bottomctz = bottomctz >> (warp_thread ^ group_thread);
+  bottomctz = uctz(bottomctz);
+  if (bottomctz >= TPI)
     return BITS;
-  return __shfl_sync(sync, group_thread*32*LIMBS + ctz, bottomctz, TPI);
+  return __shfl_sync(sync, group_thread * 32 * LIMBS + ctz, bottomctz, TPI);
 }
 
-template<class env> 
+template <class env>
 __device__ __forceinline__ uint32_t core_t<env>::clzt(const uint32_t a[LIMBS]) {
-  uint32_t sync=sync_mask(), group_thread=threadIdx.x & TPI-1, warp_thread=threadIdx.x & warpSize-1;
+  uint32_t sync = sync_mask(), group_thread = threadIdx.x & TPI - 1,
+           warp_thread = threadIdx.x & warpSize - 1;
   uint32_t lor, topclz;
 
-  lor=mplor<LIMBS>(a);
-  topclz=__ballot_sync(sync, lor!=0);
-  if(TPI<warpSize)
-    topclz=topclz<<(warpSize-TPI)-(warp_thread-group_thread);
-  topclz=uclz(topclz);
+  lor = mplor<LIMBS>(a);
+  topclz = __ballot_sync(sync, lor != 0);
+  if (TPI < warpSize)
+    topclz = topclz << (warpSize - TPI) - (warp_thread - group_thread);
+  topclz = uclz(topclz);
   return umin(topclz, TPI);
 }
 
-template<class env> 
+template <class env>
 __device__ __forceinline__ uint32_t core_t<env>::ctzt(const uint32_t a[LIMBS]) {
-  uint32_t sync=sync_mask(), group_thread=threadIdx.x & TPI-1, warp_thread=threadIdx.x & warpSize-1;
+  uint32_t sync = sync_mask(), group_thread = threadIdx.x & TPI - 1,
+           warp_thread = threadIdx.x & warpSize - 1;
   uint32_t lor, bottomctz;
 
-  lor=mplor<LIMBS>(a);
-  bottomctz=__ballot_sync(sync, lor!=0);
-  if(TPI<warpSize)
-    bottomctz=bottomctz>>(warp_thread^group_thread);
-  bottomctz=uctz(bottomctz);
+  lor = mplor<LIMBS>(a);
+  bottomctz = __ballot_sync(sync, lor != 0);
+  if (TPI < warpSize)
+    bottomctz = bottomctz >> (warp_thread ^ group_thread);
+  bottomctz = uctz(bottomctz);
   return umin(topctz, TPI);
 }
 

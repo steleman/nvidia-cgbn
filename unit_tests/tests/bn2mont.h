@@ -22,33 +22,33 @@ IN THE SOFTWARE.
 
 ***/
 
-template<class params>
-struct implementation<test_bn2mont_1, params> {
-  static const uint32_t TPI=params::TPI;
-  static const uint32_t BITS=params::BITS;
+template <class params> struct implementation<test_bn2mont_1, params> {
+  static const uint32_t TPI = params::TPI;
+  static const uint32_t BITS = params::BITS;
 
-  typedef cgbn_context_t<TPI, params>    context_t;
-  typedef cgbn_env_t<context_t, BITS>    env_t;
-  typedef typename env_t::cgbn_t         bn_t;
+  typedef cgbn_context_t<TPI, params> context_t;
+  typedef cgbn_env_t<context_t, BITS> env_t;
+  typedef typename env_t::cgbn_t bn_t;
 
-  public:
-  __device__ __host__ static void run(typename types<params>::input_t *inputs, typename types<params>::output_t *outputs, int32_t instance) {
+public:
+  __device__ __host__ static void run(typename types<params>::input_t* inputs,
+                                      typename types<params>::output_t* outputs,
+                                      int32_t instance) {
     context_t context(cgbn_print_monitor);
-    env_t     env(context);
-    bn_t      h1, h2, x1, r1, r2, temp;
-    int32_t   compare;
+    env_t env(context);
+    bn_t h1, h2, x1, r1, r2, temp;
+    int32_t compare;
 
     cgbn_load(env, h1, &(inputs[instance].h1));
     cgbn_load(env, h2, &(inputs[instance].h2));
     cgbn_load(env, x1, &(inputs[instance].x1));
 
-    compare=cgbn_compare(env, h1, h2);
-    if(compare>0) {
+    compare = cgbn_compare(env, h1, h2);
+    if (compare > 0) {
       cgbn_set(env, temp, h1);
       cgbn_set(env, h1, h2);
       cgbn_set(env, h2, temp);
-    }
-    else if(compare==0)
+    } else if (compare == 0)
       cgbn_set_ui32(env, h1, 0);
 
     cgbn_bitwise_mask_ior(env, h2, h2, 1);
@@ -59,4 +59,3 @@ struct implementation<test_bn2mont_1, params> {
     cgbn_store(env, &(outputs[instance].r2), r2);
   }
 };
-

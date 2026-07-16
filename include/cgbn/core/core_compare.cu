@@ -24,13 +24,15 @@ IN THE SOFTWARE.
 
 namespace cgbn {
 
-template<class env>
-__device__ __forceinline__ bool core_t<env>::equals(const uint32_t a[LIMBS], const uint32_t b[LIMBS]) {
+template <class env>
+__device__ __forceinline__ bool core_t<env>::equals(const uint32_t a[LIMBS],
+                                                    const uint32_t b[LIMBS]) {
   return dequals<TPI, LIMBS>(sync_mask(), a, b);
 }
 
-template<class env>
-__device__ __forceinline__ int32_t core_t<env>::compare(const uint32_t a[LIMBS], const uint32_t b[LIMBS]) {
+template <class env>
+__device__ __forceinline__ int32_t
+core_t<env>::compare(const uint32_t a[LIMBS], const uint32_t b[LIMBS]) {
   return dcompare<TPI, LIMBS>(sync_mask(), a, b);
 }
 

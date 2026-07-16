@@ -24,56 +24,54 @@ IN THE SOFTWARE.
 
 namespace cgbn {
 
-template<class core, uint32_t padding>
-struct dispatch_padding_t {
-  public:
-  static const uint32_t TPI=core::TPI;
-  static const uint32_t LIMBS=core::LIMBS;
-  static const uint32_t BITS=core::BITS;
-  
-  static const uint32_t PAD_THREAD=core::PAD_THREAD;
-  static const uint32_t PAD_LIMB=core::PAD_LIMB;
+template <class core, uint32_t padding> struct dispatch_padding_t {
+public:
+  static const uint32_t TPI = core::TPI;
+  static const uint32_t LIMBS = core::LIMBS;
+  static const uint32_t BITS = core::BITS;
 
-  __device__ __forceinline__ static uint32_t clear_carry(uint32_t &x) {
-    uint32_t sync=core::sync_mask(), group_thread=threadIdx.x & TPI-1;
+  static const uint32_t PAD_THREAD = core::PAD_THREAD;
+  static const uint32_t PAD_LIMB = core::PAD_LIMB;
+
+  __device__ __forceinline__ static uint32_t clear_carry(uint32_t& x) {
+    uint32_t sync = core::sync_mask(), group_thread = threadIdx.x & TPI - 1;
     uint32_t result;
-    
-    result=__shfl_sync(sync, x, PAD_THREAD, TPI);
-    x=(group_thread<PAD_THREAD) ? x : 0;
+
+    result = __shfl_sync(sync, x, PAD_THREAD, TPI);
+    x = (group_thread < PAD_THREAD) ? x : 0;
     return result;
   }
-  
+
   __device__ __forceinline__ static uint32_t clear_carry(uint32_t x[LIMBS]) {
-    uint32_t sync=core::sync_mask(), group_thread=threadIdx.x & TPI-1;
+    uint32_t sync = core::sync_mask(), group_thread = threadIdx.x & TPI - 1;
     uint32_t result;
-    
-    result=__shfl_sync(sync, x[PAD_LIMB], PAD_THREAD, TPI);
-    x[PAD_LIMB]=(group_thread!=PAD_THREAD) ? x[PAD_LIMB] : 0;
+
+    result = __shfl_sync(sync, x[PAD_LIMB], PAD_THREAD, TPI);
+    x[PAD_LIMB] = (group_thread != PAD_THREAD) ? x[PAD_LIMB] : 0;
     return result;
   }
 
-  __device__ __forceinline__ static void clear_padding(uint32_t &x) {
-    uint32_t group_thread=threadIdx.x & TPI-1;
+  __device__ __forceinline__ static void clear_padding(uint32_t& x) {
+    uint32_t group_thread = threadIdx.x & TPI - 1;
 
-    x=(group_thread<PAD_THREAD) ? x : 0;
+    x = (group_thread < PAD_THREAD) ? x : 0;
   }
 
   __device__ __forceinline__ static void clear_padding(uint32_t x[LIMBS]) {
-    uint32_t group_thread=threadIdx.x & TPI-1;
-    int32_t  group_base=group_thread*LIMBS;
-    
-    #pragma unroll
-    for(int32_t index=0;index<LIMBS;index++)
-      x[index]=(group_base<BITS/32-index) ? x[index] : 0;
+    uint32_t group_thread = threadIdx.x & TPI - 1;
+    int32_t group_base = group_thread * LIMBS;
+
+#pragma unroll
+    for (int32_t index = 0; index < LIMBS; index++)
+      x[index] = (group_base < BITS / 32 - index) ? x[index] : 0;
   }
 };
 
-template<class core>
-struct dispatch_padding_t<core, 0> {
-  public:
-  static const uint32_t LIMBS=core::LIMBS;
+template <class core> struct dispatch_padding_t<core, 0> {
+public:
+  static const uint32_t LIMBS = core::LIMBS;
 
-  __device__ __forceinline__ static uint32_t clear_carry(uint32_t &x) {
+  __device__ __forceinline__ static uint32_t clear_carry(uint32_t& x) {
     return 0;
   }
 
@@ -81,11 +79,9 @@ struct dispatch_padding_t<core, 0> {
     return 0;
   }
 
-  __device__ __forceinline__ static void clear_padding(uint32_t &x) {
-  }
+  __device__ __forceinline__ static void clear_padding(uint32_t& x) {}
 
-  __device__ __forceinline__ static void clear_padding(uint32_t x[LIMBS]) {
-  }
+  __device__ __forceinline__ static void clear_padding(uint32_t x[LIMBS]) {}
 };
 
 } /* namespace cgbn */

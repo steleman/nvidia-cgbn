@@ -22,20 +22,20 @@ IN THE SOFTWARE.
 
 ***/
 
-
 /**************************************************************************
  * powm (odd modulus)
  **************************************************************************/
 
 #define window_bits 5
 
-template<uint32_t tpi, uint32_t bits>
-__device__ __forceinline__ void xmp_tester<tpi, bits>::x_test_powm_odd(xmp_tester<tpi, bits>::x_instance_t *instances) {
-  int32_t    LOOPS=LOOP_COUNT(bits, xt_powm_odd);
-  bn_t       x, power, modulus, t;
-  bn_local_t window[1<<window_bits];
-  int32_t    index, position;
-  uint32_t   np0;
+template <uint32_t tpi, uint32_t bits>
+__device__ __forceinline__ void xmp_tester<tpi, bits>::x_test_powm_odd(
+    xmp_tester<tpi, bits>::x_instance_t* instances) {
+  int32_t LOOPS = LOOP_COUNT(bits, xt_powm_odd);
+  bn_t x, power, modulus, t;
+  bn_local_t window[1 << window_bits];
+  int32_t index, position;
+  uint32_t np0;
 
   // fixed window powm algorithm
   //   requires an odd modulus
@@ -44,54 +44,56 @@ __device__ __forceinline__ void xmp_tester<tpi, bits>::x_test_powm_odd(xmp_teste
   _env.load(x, &(instances[_instance].x0));
   _env.load(power, &(instances[_instance].x1));
   _env.load(modulus, &(instances[_instance].o0));
-  
-  _env.bitwise_mask_and(x, x, bits-1);
+
+  _env.bitwise_mask_and(x, x, bits - 1);
   _env.bitwise_mask_ior(modulus, modulus, -1);
   _env.bitwise_mask_and(power, power, 512);
 
-  #pragma nounroll
-  for(int32_t loop=0;loop<LOOPS;loop++) {
+#pragma nounroll
+  for (int32_t loop = 0; loop < LOOPS; loop++) {
     _env.negate(t, modulus);
-    _env.store(window+0, t);
-    
-    np0=_env.bn2mont(x, x, modulus);
-    _env.store(window+1, x);
+    _env.store(window + 0, t);
+
+    np0 = _env.bn2mont(x, x, modulus);
+    _env.store(window + 1, x);
     _env.set(t, x);
-    
-    #pragma nounroll
-    for(index=2;index<(1<<window_bits);index++) {
+
+#pragma nounroll
+    for (index = 2; index < (1 << window_bits); index++) {
       _env.mont_mul(x, x, t, modulus, np0);
-      _env.store(window+index, x);
+      _env.store(window + index, x);
     }
 
-    position=512 - (512 % window_bits);
-    index=_env.extract_bits_ui32(power, position, 512 % window_bits);
-    _env.load(x, window+index);
-    
-    while(position>0) {
-      #pragma nounroll
-      for(int sqr_count=0;sqr_count<window_bits;sqr_count++) {
+    position = 512 - (512 % window_bits);
+    index = _env.extract_bits_ui32(power, position, 512 % window_bits);
+    _env.load(x, window + index);
+
+    while (position > 0) {
+#pragma nounroll
+      for (int sqr_count = 0; sqr_count < window_bits; sqr_count++) {
         _env.mont_sqr(x, x, modulus, np0);
       }
-      
-      position=position-window_bits;
-      index=_env.extract_bits_ui32(power, position, window_bits);
-      _env.load(t, window+index);
+
+      position = position - window_bits;
+      index = _env.extract_bits_ui32(power, position, window_bits);
+      _env.load(t, window + index);
       _env.mont_mul(x, x, t, modulus, np0);
     }
-    
+
     _env.mont2bn(x, x, modulus, np0);
-   }
+  }
   _env.store(&(instances[_instance].r), x);
 }
 
-template<uint32_t tpi, uint32_t bits>
-__global__ void x_test_powm_odd_kernel(typename xmp_tester<tpi, bits>::x_instance_t *instances, uint32_t count) {
-  uint32_t instance=(blockIdx.x*blockDim.x + threadIdx.x)/tpi;
-  
-  if(instance>=count)
+template <uint32_t tpi, uint32_t bits>
+__global__ void
+x_test_powm_odd_kernel(typename xmp_tester<tpi, bits>::x_instance_t* instances,
+                       uint32_t count) {
+  uint32_t instance = (blockIdx.x * blockDim.x + threadIdx.x) / tpi;
+
+  if (instance >= count)
     return;
-  
+
   xmp_tester<tpi, bits> tester(cgbn_no_checks, NULL, instance);
   tester.x_test_powm_odd(instances);
 }

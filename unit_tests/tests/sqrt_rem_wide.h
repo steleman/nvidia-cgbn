@@ -22,21 +22,22 @@ IN THE SOFTWARE.
 
 ***/
 
-template<class params>
-struct implementation<test_sqrt_rem_wide_1, params> {
-  static const uint32_t TPI=params::TPI;
-  static const uint32_t BITS=params::BITS;
+template <class params> struct implementation<test_sqrt_rem_wide_1, params> {
+  static const uint32_t TPI = params::TPI;
+  static const uint32_t BITS = params::BITS;
 
-  typedef cgbn_context_t<TPI, params>    context_t;
-  typedef cgbn_env_t<context_t, BITS>    env_t;
-  typedef typename env_t::cgbn_t         bn_t;
-  typedef typename env_t::cgbn_wide_t    bn_wide_t;
+  typedef cgbn_context_t<TPI, params> context_t;
+  typedef cgbn_env_t<context_t, BITS> env_t;
+  typedef typename env_t::cgbn_t bn_t;
+  typedef typename env_t::cgbn_wide_t bn_wide_t;
 
-  public:
-  __device__ __host__ static void run(typename types<params>::input_t *inputs, typename types<params>::output_t *outputs, int32_t instance) {
+public:
+  __device__ __host__ static void run(typename types<params>::input_t* inputs,
+                                      typename types<params>::output_t* outputs,
+                                      int32_t instance) {
     context_t context(cgbn_print_monitor);
-    env_t     env(context);
-    bn_t      r1, r2;
+    env_t env(context);
+    bn_t r1, r2;
     bn_wide_t x, r;
 
     cgbn_load(env, x._low, &(inputs[instance].h1));
@@ -49,5 +50,3 @@ struct implementation<test_sqrt_rem_wide_1, params> {
     cgbn_store(env, &(outputs[instance].r2), r2);
   }
 };
-
-

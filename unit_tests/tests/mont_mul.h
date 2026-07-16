@@ -22,28 +22,29 @@ IN THE SOFTWARE.
 
 ***/
 
-template<class params>
-struct implementation<test_mont_mul_1, params> {
-  static const uint32_t TPI=params::TPI;
-  static const uint32_t BITS=params::BITS;
+template <class params> struct implementation<test_mont_mul_1, params> {
+  static const uint32_t TPI = params::TPI;
+  static const uint32_t BITS = params::BITS;
 
-  typedef cgbn_context_t<TPI, params>    context_t;
-  typedef cgbn_env_t<context_t, BITS>    env_t;
-  typedef typename env_t::cgbn_t         bn_t;
+  typedef cgbn_context_t<TPI, params> context_t;
+  typedef cgbn_env_t<context_t, BITS> env_t;
+  typedef typename env_t::cgbn_t bn_t;
 
-  public:
-  __device__ __host__ static void run(typename types<params>::input_t *inputs, typename types<params>::output_t *outputs, int32_t instance) {
+public:
+  __device__ __host__ static void run(typename types<params>::input_t* inputs,
+                                      typename types<params>::output_t* outputs,
+                                      int32_t instance) {
     context_t context(cgbn_print_monitor);
-    env_t     env(context);
-    bn_t      x1, x2, h1, r1;
-    uint32_t  np0;
+    env_t env(context);
+    bn_t x1, x2, h1, r1;
+    uint32_t np0;
 
     cgbn_load(env, h1, &(inputs[instance].h1));
     cgbn_load(env, x1, &(inputs[instance].x1));
     cgbn_load(env, x2, &(inputs[instance].x2));
 
     cgbn_bitwise_mask_ior(env, h1, h1, 1);
-    np0=-cgbn_binary_inverse_ui32(env, cgbn_get_ui32(env, h1));
+    np0 = -cgbn_binary_inverse_ui32(env, cgbn_get_ui32(env, h1));
 
     cgbn_mont_mul(env, r1, x1, x2, h1, np0);
 

@@ -22,62 +22,62 @@ IN THE SOFTWARE.
 
 ***/
 
-template<class params>
-struct implementation<test_accumulator_1, params> {
-  public:
-  static const uint32_t TPI=params::TPI;
-  static const uint32_t BITS=params::BITS;
+template <class params> struct implementation<test_accumulator_1, params> {
+public:
+  static const uint32_t TPI = params::TPI;
+  static const uint32_t BITS = params::BITS;
 
-  typedef cgbn_context_t<TPI, params>        context_t;
-  typedef cgbn_env_t<context_t, BITS>        env_t;
-  typedef typename env_t::cgbn_t             bn_t;
+  typedef cgbn_context_t<TPI, params> context_t;
+  typedef cgbn_env_t<context_t, BITS> env_t;
+  typedef typename env_t::cgbn_t bn_t;
   typedef typename env_t::cgbn_accumulator_t bn_acc_t;
 
-  __device__ __host__ static void run(typename types<params>::input_t *inputs, typename types<params>::output_t *outputs, int32_t instance) {
-    context_t      context(cgbn_print_monitor);
-    env_t          env(context);
-    bn_acc_t       acc;
-    bn_t           x, r1, r2;
-    uint32_t       u1;
-    int32_t        carry;
+  __device__ __host__ static void run(typename types<params>::input_t* inputs,
+                                      typename types<params>::output_t* outputs,
+                                      int32_t instance) {
+    context_t context(cgbn_print_monitor);
+    env_t env(context);
+    bn_acc_t acc;
+    bn_t x, r1, r2;
+    uint32_t u1;
+    int32_t carry;
 
-    u1=inputs[instance].u[0];
+    u1 = inputs[instance].u[0];
 
     cgbn_load(env, x, &(inputs[instance].h1));
-    if((u1 & 0x01)==0)
+    if ((u1 & 0x01) == 0)
       cgbn_add(env, acc, x);
     else
       cgbn_sub(env, acc, x);
 
     cgbn_load(env, x, &(inputs[instance].h2));
-    if((u1 & 0x02)==0)
+    if ((u1 & 0x02) == 0)
       cgbn_add(env, acc, x);
     else
       cgbn_sub(env, acc, x);
 
     cgbn_load(env, x, &(inputs[instance].x1));
-    if((u1 & 0x04)==0)
+    if ((u1 & 0x04) == 0)
       cgbn_add(env, acc, x);
     else
       cgbn_sub(env, acc, x);
 
     cgbn_load(env, x, &(inputs[instance].x2));
-    if((u1 & 0x08)==0)
+    if ((u1 & 0x08) == 0)
       cgbn_add(env, acc, x);
     else
       cgbn_sub(env, acc, x);
 
     cgbn_load(env, x, &(inputs[instance].x3));
-    if((u1 & 0x10)==0)
+    if ((u1 & 0x10) == 0)
       cgbn_add(env, acc, x);
     else
       cgbn_sub(env, acc, x);
 
-    carry=cgbn_resolve(env, r1, acc);
+    carry = cgbn_resolve(env, r1, acc);
     cgbn_set_ui32(env, r2, (uint32_t)carry);
 
     cgbn_store(env, &(outputs[instance].r1), r1);
     cgbn_store(env, &(outputs[instance].r2), r2);
   }
 };
-

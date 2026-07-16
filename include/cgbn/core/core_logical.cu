@@ -24,49 +24,57 @@ IN THE SOFTWARE.
 
 namespace cgbn {
 
-template<class env> 
-__device__ __forceinline__ void core_t<env>::bitwise_and(uint32_t r[LIMBS], const uint32_t a[LIMBS], const uint32_t b[LIMBS]) {
-  #pragma unroll
-  for(int32_t index=0;index<LIMBS;index++)
-    r[index]=a[index] & b[index];
+template <class env>
+__device__ __forceinline__ void
+core_t<env>::bitwise_and(uint32_t r[LIMBS], const uint32_t a[LIMBS],
+                         const uint32_t b[LIMBS]) {
+#pragma unroll
+  for (int32_t index = 0; index < LIMBS; index++)
+    r[index] = a[index] & b[index];
 }
 
-template<class env> 
-__device__ __forceinline__ void core_t<env>::bitwise_ior(uint32_t r[LIMBS], const uint32_t a[LIMBS], const uint32_t b[LIMBS]) {
-  #pragma unroll
-  for(int32_t index=0;index<LIMBS;index++)
-    r[index]=a[index] | b[index];
+template <class env>
+__device__ __forceinline__ void
+core_t<env>::bitwise_ior(uint32_t r[LIMBS], const uint32_t a[LIMBS],
+                         const uint32_t b[LIMBS]) {
+#pragma unroll
+  for (int32_t index = 0; index < LIMBS; index++)
+    r[index] = a[index] | b[index];
 }
 
-template<class env> 
-__device__ __forceinline__ void core_t<env>::bitwise_xor(uint32_t r[LIMBS], const uint32_t a[LIMBS], const uint32_t b[LIMBS]) {
-  #pragma unroll
-  for(int32_t index=0;index<LIMBS;index++)
-    r[index]=a[index] ^ b[index];
+template <class env>
+__device__ __forceinline__ void
+core_t<env>::bitwise_xor(uint32_t r[LIMBS], const uint32_t a[LIMBS],
+                         const uint32_t b[LIMBS]) {
+#pragma unroll
+  for (int32_t index = 0; index < LIMBS; index++)
+    r[index] = a[index] ^ b[index];
 }
 
-template<class env> 
-__device__ __forceinline__ void core_t<env>::bitwise_complement(uint32_t r[LIMBS], const uint32_t a[LIMBS]) {
-  if(PADDING==0) {
-    #pragma unroll
-    for(int32_t index=0;index<LIMBS;index++)
-      r[index]=~a[index];
+template <class env>
+__device__ __forceinline__ void
+core_t<env>::bitwise_complement(uint32_t r[LIMBS], const uint32_t a[LIMBS]) {
+  if (PADDING == 0) {
+#pragma unroll
+    for (int32_t index = 0; index < LIMBS; index++)
+      r[index] = ~a[index];
+  } else {
+    uint32_t group_thread = threadIdx.x & TPI - 1;
+
+#pragma unroll
+    for (int32_t index = 0; index < LIMBS; index++)
+      r[index] = (group_thread * LIMBS < BITS / 32 - index) ? ~a[index] : 0;
   }
-  else {
-    uint32_t group_thread=threadIdx.x & TPI-1;
-    
-    #pragma unroll
-    for(int32_t index=0;index<LIMBS;index++)
-      r[index]=(group_thread*LIMBS<BITS/32-index) ? ~a[index] : 0;
-  }
 }
 
-template<class env> 
-__device__ __forceinline__ void core_t<env>::bitwise_select(uint32_t r[LIMBS], const uint32_t clear[LIMBS], const uint32_t set[LIMBS], const uint32_t select[LIMBS]) {
-  #pragma unroll
-  for(int32_t index=0;index<LIMBS;index++)
-    r[index]=(set[index] & select[index]) | (clear[index] & ~select[index]);
+template <class env>
+__device__ __forceinline__ void
+core_t<env>::bitwise_select(uint32_t r[LIMBS], const uint32_t clear[LIMBS],
+                            const uint32_t set[LIMBS],
+                            const uint32_t select[LIMBS]) {
+#pragma unroll
+  for (int32_t index = 0; index < LIMBS; index++)
+    r[index] = (set[index] & select[index]) | (clear[index] & ~select[index]);
 }
 
 } /* namespace cgbn */
-

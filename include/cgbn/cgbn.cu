@@ -22,70 +22,70 @@ IN THE SOFTWARE.
 
 ***/
 
-inline cudaError_t cgbn_error_report_alloc(cgbn_error_report_t **report) {
+inline cudaError_t cgbn_error_report_alloc(cgbn_error_report_t** report) {
   cudaError_t status;
 
-  status=cudaMallocManaged((void **)report, sizeof(cgbn_error_report_t));
-  if(status!=0)
+  status = cudaMallocManaged((void**)report, sizeof(cgbn_error_report_t));
+  if (status != 0)
     return status;
-  (*report)->_error=cgbn_no_error;
-  (*report)->_instance=0xFFFFFFFFu;
-  (*report)->_threadIdx.x=0xFFFFFFFFu;
-  (*report)->_threadIdx.y=0xFFFFFFFFu;
-  (*report)->_threadIdx.z=0xFFFFFFFFu;
-  (*report)->_blockIdx.x=0xFFFFFFFFu;
-  (*report)->_blockIdx.y=0xFFFFFFFFu;
-  (*report)->_blockIdx.z=0xFFFFFFFFu;
+  (*report)->_error = cgbn_no_error;
+  (*report)->_instance = 0xFFFFFFFFu;
+  (*report)->_threadIdx.x = 0xFFFFFFFFu;
+  (*report)->_threadIdx.y = 0xFFFFFFFFu;
+  (*report)->_threadIdx.z = 0xFFFFFFFFu;
+  (*report)->_blockIdx.x = 0xFFFFFFFFu;
+  (*report)->_blockIdx.y = 0xFFFFFFFFu;
+  (*report)->_blockIdx.z = 0xFFFFFFFFu;
   return status;
 }
 
-inline cudaError_t cgbn_error_report_free(cgbn_error_report_t *report) {
+inline cudaError_t cgbn_error_report_free(cgbn_error_report_t* report) {
   return cudaFree(report);
 }
 
-inline bool cgbn_error_report_check(cgbn_error_report_t *report) {
-  return report->_error!=cgbn_no_error;
+inline bool cgbn_error_report_check(cgbn_error_report_t* report) {
+  return report->_error != cgbn_no_error;
 }
 
-inline void cgbn_error_report_reset(cgbn_error_report_t *report) {
-  report->_error=cgbn_no_error;
-  report->_instance=0xFFFFFFFFu;
-  report->_threadIdx.x=0xFFFFFFFFu;
-  report->_threadIdx.y=0xFFFFFFFFu;
-  report->_threadIdx.z=0xFFFFFFFFu;
-  report->_blockIdx.x=0xFFFFFFFFu;
-  report->_blockIdx.y=0xFFFFFFFFu;
-  report->_blockIdx.z=0xFFFFFFFFu;
+inline void cgbn_error_report_reset(cgbn_error_report_t* report) {
+  report->_error = cgbn_no_error;
+  report->_instance = 0xFFFFFFFFu;
+  report->_threadIdx.x = 0xFFFFFFFFu;
+  report->_threadIdx.y = 0xFFFFFFFFu;
+  report->_threadIdx.z = 0xFFFFFFFFu;
+  report->_blockIdx.x = 0xFFFFFFFFu;
+  report->_blockIdx.y = 0xFFFFFFFFu;
+  report->_blockIdx.z = 0xFFFFFFFFu;
 }
 
-inline const char *cgbn_error_string(cgbn_error_report_t *report) {
-  if(report->_error==cgbn_no_error)
+inline const char* cgbn_error_string(cgbn_error_report_t* report) {
+  if (report->_error == cgbn_no_error)
     return NULL;
-  switch(report->_error) {
-    case cgbn_unsupported_threads_per_instance:
-      return "unsupported threads per instance";
-    case cgbn_unsupported_size:
-      return "unsupported size";
-    case cgbn_unsupported_limbs_per_thread:
-      return "unsupported limbs per thread";
-    case cgbn_unsupported_operation:
-      return "unsupported operation";
-    case cgbn_threads_per_block_mismatch:
-      return "TPB does not match blockDim.x";
-    case cgbn_threads_per_instance_mismatch:
-      return "TPI does not match env_t::TPI";
-    case cgbn_division_by_zero_error:
-      return "division by zero";
-    case cgbn_division_overflow_error:
-      return "division overflow";
-    case cgbn_invalid_montgomery_modulus_error:
-      return "invalid montgomery modulus";
-    case cgbn_modulus_not_odd_error:
-      return "invalid modulus (it must be odd)";
-    case cgbn_inverse_does_not_exist_error:
-      return "inverse does not exist";
-    case cgbn_no_error:
-      return NULL;
+  switch (report->_error) {
+  case cgbn_unsupported_threads_per_instance:
+    return "unsupported threads per instance";
+  case cgbn_unsupported_size:
+    return "unsupported size";
+  case cgbn_unsupported_limbs_per_thread:
+    return "unsupported limbs per thread";
+  case cgbn_unsupported_operation:
+    return "unsupported operation";
+  case cgbn_threads_per_block_mismatch:
+    return "TPB does not match blockDim.x";
+  case cgbn_threads_per_instance_mismatch:
+    return "TPI does not match env_t::TPI";
+  case cgbn_division_by_zero_error:
+    return "division by zero";
+  case cgbn_division_overflow_error:
+    return "division overflow";
+  case cgbn_invalid_montgomery_modulus_error:
+    return "invalid montgomery modulus";
+  case cgbn_modulus_not_odd_error:
+    return "invalid modulus (it must be odd)";
+  case cgbn_inverse_does_not_exist_error:
+    return "inverse does not exist";
+  case cgbn_no_error:
+    return NULL;
   }
   return NULL;
 }

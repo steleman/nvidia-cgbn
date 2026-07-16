@@ -50,81 +50,88 @@ typedef enum {
 } test_t;
 
 #define GT_FIRST gt_add
-#define GT_LAST  gt_modinv
+#define GT_LAST gt_modinv
 
 #define XT_FIRST xt_add
-#define XT_LAST  xt_modinv
+#define XT_LAST xt_modinv
 
-test_t gt_parse(const char *name) {
-  if(strcmp(name, "add")==0)
+test_t gt_parse(const char* name) {
+  if (strcmp(name, "add") == 0)
     return gt_add;
-  else if(strcmp(name, "sub")==0)
+  else if (strcmp(name, "sub") == 0)
     return gt_sub;
-  else if(strcmp(name, "mul")==0)
+  else if (strcmp(name, "mul") == 0)
     return gt_mul;
-  else if(strcmp(name, "div_qr")==0)
+  else if (strcmp(name, "div_qr") == 0)
     return gt_div_qr;
-  else if(strcmp(name, "sqrt")==0)
+  else if (strcmp(name, "sqrt") == 0)
     return gt_sqrt;
-  else if(strcmp(name, "powm_odd")==0)
+  else if (strcmp(name, "powm_odd") == 0)
     return gt_powm_odd;
-  else if(strcmp(name, "mont_reduce")==0)
+  else if (strcmp(name, "mont_reduce") == 0)
     return gt_mont_reduce;
-  else if(strcmp(name, "gcd")==0)
+  else if (strcmp(name, "gcd") == 0)
     return gt_gcd;
-  else if(strcmp(name, "modinv")==0)
+  else if (strcmp(name, "modinv") == 0)
     return gt_modinv;
   return test_unknown;
 }
 
-test_t xt_parse(const char *name) {
-  if(strcmp(name, "add")==0)
+test_t xt_parse(const char* name) {
+  if (strcmp(name, "add") == 0)
     return xt_add;
-  else if(strcmp(name, "sub")==0)
+  else if (strcmp(name, "sub") == 0)
     return xt_sub;
-  else if(strcmp(name, "accumulate")==0)
+  else if (strcmp(name, "accumulate") == 0)
     return xt_accumulate;
-  else if(strcmp(name, "mul")==0)
+  else if (strcmp(name, "mul") == 0)
     return xt_mul;
-  else if(strcmp(name, "div_qr")==0)
+  else if (strcmp(name, "div_qr") == 0)
     return xt_div_qr;
-  else if(strcmp(name, "sqrt")==0)
+  else if (strcmp(name, "sqrt") == 0)
     return xt_sqrt;
-  else if(strcmp(name, "powm_odd")==0)
+  else if (strcmp(name, "powm_odd") == 0)
     return xt_powm_odd;
-  else if(strcmp(name, "mont_reduce")==0)
+  else if (strcmp(name, "mont_reduce") == 0)
     return xt_mont_reduce;
-  else if(strcmp(name, "gcd")==0)
+  else if (strcmp(name, "gcd") == 0)
     return xt_gcd;
-  else if(strcmp(name, "modinv")==0)
+  else if (strcmp(name, "modinv") == 0)
     return xt_modinv;
   return test_unknown;
 }
 
-const char *test_name(test_t test) {
-  switch(test) {
-    case gt_add: case xt_add:
-      return "add";
-    case gt_sub: case xt_sub:
-      return "sub";
-    case xt_accumulate:
-      return "accumulate";
-    case gt_mul: case xt_mul:
-      return "mul";
-    case gt_div_qr: case xt_div_qr:
-      return "div_qr";
-    case gt_sqrt: case xt_sqrt:
-      return "sqrt";
-    case gt_powm_odd: case xt_powm_odd:
-      return "powm_odd";
-    case gt_mont_reduce: case xt_mont_reduce:
-      return "mont_reduce";
-    case gt_gcd: case xt_gcd:
-      return "gcd";
-    case gt_modinv: case xt_modinv:
-      return "modinv";
+const char* test_name(test_t test) {
+  switch (test) {
+  case gt_add:
+  case xt_add:
+    return "add";
+  case gt_sub:
+  case xt_sub:
+    return "sub";
+  case xt_accumulate:
+    return "accumulate";
+  case gt_mul:
+  case xt_mul:
+    return "mul";
+  case gt_div_qr:
+  case xt_div_qr:
+    return "div_qr";
+  case gt_sqrt:
+  case xt_sqrt:
+    return "sqrt";
+  case gt_powm_odd:
+  case xt_powm_odd:
+    return "powm_odd";
+  case gt_mont_reduce:
+  case xt_mont_reduce:
+    return "mont_reduce";
+  case gt_gcd:
+  case xt_gcd:
+    return "gcd";
+  case gt_modinv:
+  case xt_modinv:
+    return "modinv";
   }
   return "unknown";
 }
-
-
